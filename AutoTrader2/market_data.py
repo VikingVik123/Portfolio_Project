@@ -13,14 +13,14 @@ class MarketData:
             'options': {
                 'defaultType': 'future'
             },
-            'urls': {
-                'api': {
-                    'fapiPublic': 'https://testnet.binancefuture.com/fapi/v1',
-                    'fapiPrivate': 'https://testnet.binancefuture.com/fapi/v1',
-                },
-            }
+            #'urls': {
+            #    'api': {
+            #        'fapiPublic': 'https://testnet.binancefuture.com/fapi/v1',
+            #        'fapiPrivate': 'https://testnet.binancefuture.com/fapi/v1',
+            #    },
+            #}
         })
-        self.exchange.set_sandbox_mode(True)
+        #self.exchange.set_sandbox_mode(True)
         logging.info("Initialized exchange in sandbox mode")
 
     def fetch_data(self, limit=1):

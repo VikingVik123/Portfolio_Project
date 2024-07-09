@@ -5,6 +5,7 @@ from market_data import MarketData
 from strategy import Strategy
 from config import API_KEY, API_SECRET
 from datetime import datetime
+import time
 
 class TradingEngine(MarketData):
     def __init__(self):
@@ -12,6 +13,7 @@ class TradingEngine(MarketData):
         self.symbol = 'BTC/USDT'
         self.strategy = Strategy()
         self.lock = threading.Lock()  # Initialize lock for thread safety
+        logging.basicConfig(level=logging.INFO)  # Set logging level to INFO
 
     def log_closed_trade(self, order, current_price):
         order_price = float(order['price'])
@@ -73,22 +75,24 @@ class TradingEngine(MarketData):
         try:
             balance = self.exchange.fetch_balance()
             usdt_balance = balance['total']['USDT']
+            logging.info(f"Fetched balance: {usdt_balance}")
             return usdt_balance
         except Exception as e:
             logging.error(f"An error occurred while fetching balance: {e}")
             return None
     
     def calc_order(self, usdt_balance, current_price, risk_percentage=100):
-        risk_amount = usdt_balance * risk_percentage
+        risk_amount = usdt_balance * (risk_percentage / 100)
         order_size = risk_amount / current_price
+        logging.info(f"Calculated order size: {order_size}")
         return order_size
 
     def place_order(self, side, amount):
         try:
             order = self.exchange.create_market_order(self.symbol, side, amount)
-            print(f"Placed {side} order for {amount} {self.symbol}. Order ID: {order['id']}")
+            logging.info(f"Placed {side} order for {amount} {self.symbol}. Order ID: {order['id']}")
         except Exception as e:
-            print(f"An error occurred while placing order: {e}")
+            logging.error(f"An error occurred while placing order: {e}")
 
     def close_orders(self, side):
         try:
@@ -96,10 +100,10 @@ class TradingEngine(MarketData):
             for order in open_orders:
                 if order['side'] == side:
                     self.exchange.cancel_order(order['id'], self.symbol)
-                    print(f"Closed {side} order ID: {order['id']} for {self.symbol}")
+                    logging.info(f"Closed {side} order ID: {order['id']} for {self.symbol}")
                     self.log_closed_trade(order, float(order['price']))
         except Exception as e:
-            print(f"An error occurred while closing order: {e}")
+            logging.error(f"An error occurred while closing order: {e}")
 
     def show_open_positions(self):
         try:
@@ -114,6 +118,7 @@ class TradingEngine(MarketData):
         
     def execute_order(self):
         ohlcv = self.fetch_data()
+        logging.info(f"Fetched market data: {ohlcv}")
         self.save_to_db(ohlcv)
 
         df = self.strategy.read_price()
@@ -122,18 +127,39 @@ class TradingEngine(MarketData):
         df = self.strategy.exit_signals(df)
 
         latest = df.iloc[-1]
+        logging.info(f"Latest data for decision making: {latest}")
 
         balance = self.get_balance()
-        usdt_balance = balance['USDT']['free']
+        if balance is None:
+            logging.error("Failed to fetch balance, skipping order execution.")
+            return
+
+        usdt_balance = balance['free']['USDT']
         current_price = latest['close']
         order_amount = self.calc_order(usdt_balance, current_price)
 
         if latest.get('enter_long') == 1:
+            logging.info(f"Entering long position with amount: {order_amount}")
             self.place_order('buy', order_amount)
         elif latest.get('enter_short') == 1:
+            logging.info(f"Entering short position with amount: {order_amount}")
             self.place_order('sell', order_amount)
 
         if latest.get('exit_long') == 1:
+            logging.info("Exiting long positions.")
             self.close_orders('buy')
         elif latest.get('exit_short') == 1:
+            logging.info("Exiting short positions.")
             self.close_orders('sell')
+
+# Add a method or loop to trigger execute_order regularly
+"""
+if __name__ == "__main__":
+    engine = TradingEngine()
+    # For example, using threading to execute order every minute
+    def run_trading_engine():
+        while True:
+            engine.execute_order()
+            time.sleep(60)  # Sleep for 1 minute
+
+"""

@@ -9,7 +9,7 @@ class TradingBot:
     def __init__(self):
         self.market_data = MarketData()
         self.strategy = Strategy()
-        self.trading_engine = TradingEngine(API_KEY, API_SECRET)
+        self.trading_engine = TradingEngine()
 
     def run(self):
         while True:
@@ -17,7 +17,10 @@ class TradingBot:
                 # Fetch and save the latest market data
                 ohlcv = self.market_data.fetch_data()
                 self.market_data.save_to_db(ohlcv)
-                
+                df = self.strategy.read_price()
+                self.strategy.calc_indicators(df)
+                self.strategy.entry_signals(df)
+                self.strategy.exit_signals(df)
                 # Execute the trading strategy
                 self.trading_engine.execute_order()
 
@@ -30,4 +33,5 @@ class TradingBot:
 if __name__ == '__main__':
     trading_engine = TradingEngine()
     bot = TelegramBot(trading_engine)
-    bot.run()
+    bot2 = TradingBot()
+    bot2.run()

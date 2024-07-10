@@ -65,4 +65,3 @@ class TelegramBot:
 
     def run(self):
         self.application.run_polling()
-

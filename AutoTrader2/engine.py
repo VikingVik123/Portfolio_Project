@@ -1,4 +1,3 @@
-import threading
 import logging
 import sqlite3
 from market_data import MarketData
@@ -12,46 +11,42 @@ class TradingEngine(MarketData):
         super().__init__()
         self.symbol = 'BTC/USDT'
         self.strategy = Strategy()
-        self.lock = threading.Lock()  # Initialize lock for thread safety
-        logging.basicConfig(level=logging.INFO)  # Set logging level to INFO
 
     def log_closed_trade(self, order, current_price):
         order_price = float(order['price'])
         amount = float(order['amount'])
         profit = (current_price - order_price) * amount if order['side'] == 'buy' else (order_price - current_price) * amount
         
-        with self.lock:  # Use lock for thread safety
-            try:
-                conn = sqlite3.connect('app.db', check_same_thread=False)
-                cursor = conn.cursor()
-                cursor.execute("""
-                    INSERT INTO closed_trades (timestamp, symbol, side, amount, price, profit) VALUES (?, ?, ?, ?, ?, ?)
+        try:
+            conn = sqlite3.connect('app.db', check_same_thread=False)
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO closed_trades (timestamp, symbol, side, amount, price, profit) VALUES (?, ?, ?, ?, ?, ?)
                 """, (
-                    datetime.fromtimestamp(order['timestamp'] / 1000).isoformat(),
-                    self.symbol,
-                    order['side'],
-                    amount,
-                    order_price,
-                    profit
-                ))
-                conn.commit()
-            except Exception as e:
-                logging.error(f"Error logging closed trade: {e}")
-            finally:
-                conn.close()
+                datetime.fromtimestamp(order['timestamp'] / 1000).isoformat(),
+                self.symbol,
+                order['side'],
+                amount,
+                order_price,
+                profit
+            ))
+            conn.commit()
+        except Exception as e:
+            logging.error(f"Error logging closed trade: {e}")
+        finally:
+            conn.close()
 
     def show_trade_stats(self):
-        with self.lock:  # Use lock for thread safety
-            try:
-                conn = sqlite3.connect('app.db', check_same_thread=False)
-                cursor = conn.cursor()
-                cursor.execute("SELECT * FROM closed_trades")
-                trades = cursor.fetchall()
-            except Exception as e:
-                logging.error(f"Error fetching trade stats: {e}")
-                return "Error fetching trade stats"
-            finally:
-                conn.close()
+        try:
+            conn = sqlite3.connect('app.db', check_same_thread=False)
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM closed_trades")
+            trades = cursor.fetchall()
+        except Exception as e:
+            logging.error(f"Error fetching trade stats: {e}")
+            return "Error fetching trade stats"
+        finally:
+            conn.close()
 
         total_profit = sum(trade[6] for trade in trades)
         total_trades = len(trades)
@@ -134,9 +129,8 @@ class TradingEngine(MarketData):
             logging.error("Failed to fetch balance, skipping order execution.")
             return
 
-        usdt_balance = balance['free']['USDT']
         current_price = latest['close']
-        order_amount = self.calc_order(usdt_balance, current_price)
+        order_amount = self.calc_order(balance, current_price)
 
         if latest.get('enter_long') == 1:
             logging.info(f"Entering long position with amount: {order_amount}")

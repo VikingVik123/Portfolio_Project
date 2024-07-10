@@ -23,7 +23,7 @@ class MarketData:
         self.exchange.set_sandbox_mode(True)
         logging.info("Initialized exchange in sandbox mode")
 
-    def fetch_data(self, limit=100):
+    def fetch_data(self, limit=1):
         logging.info("Fetching price data")
         ohlcv = self.exchange.fetch_ohlcv('BTC/USDT', timeframe='1m', limit=limit)
         return ohlcv
@@ -63,7 +63,7 @@ class MarketData:
         cursor.execute("SELECT * FROM btc_usdt_prices")
         rows = cursor.fetchall()
         conn.close()
-        print(rows)
+        print(rows)        
         return rows
 
 

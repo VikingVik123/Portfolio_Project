@@ -24,7 +24,7 @@ class Strategy:
         df = pd.DataFrame(rows, columns=['id', 'timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df.set_index('timestamp', inplace=True)
-        print(df)
+        
         return df
     
     def calc_indicators(self, df):
@@ -35,10 +35,10 @@ class Strategy:
 
         # Supertrend
         periodo = 7
-        atr_multiplicador = 4.0
+        atr_multiplicador = 5.0
         df['ST_long'] = pta.supertrend(df['high'], df['low'], df['close'], length=periodo, multiplier=atr_multiplicador)[f'SUPERTl_{periodo}_{atr_multiplicador}']
         df['ST_short'] = pta.supertrend(df['high'], df['low'], df['close'], length=periodo, multiplier=atr_multiplicador)[f'SUPERTs_{periodo}_{atr_multiplicador}']     
-        print(df)
+        
         return df
     
     def entry_signals(self, df):
@@ -60,7 +60,7 @@ class Strategy:
                 (df['volume'] > 0)
             ),
             'enter_short'] = 1
-        print(df)
+        
         return df
     
     def exit_signals(self, df):
@@ -74,9 +74,9 @@ class Strategy:
         return df
 
 
-#strat = Strategy()
-#df = strat.read_price()
-#strat.calc_indicators(df)
-#strat.entry_signals(df)
-#strat.exit_signals(df)
+strat = Strategy()
+df = strat.read_price()
+strat.calc_indicators(df)
+strat.entry_signals(df)
+strat.exit_signals(df)
 
